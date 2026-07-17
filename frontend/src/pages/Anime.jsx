@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import * as api from '../api'
-import { resumeTime, saveProgress } from '../progress'
+import { resumeTime, saveProgress, markWatched, unmarkWatched, isWatched } from '../progress'
 import EpisodeGrid from '../components/EpisodeGrid'
 import Player from '../components/Player'
 
@@ -24,6 +24,8 @@ export default function Anime() {
   const current = episode !== undefined ? Number(episode) : null
 
   const [seasons, setSeasons] = useState([])
+  const [synopsis, setSynopsis] = useState('')
+  const [vu, setVu] = useState(false)
   const [episodes, setEpisodes] = useState([])
   const [loadingEpisodes, setLoadingEpisodes] = useState(false)
   const [stream, setStream] = useState(null)
@@ -45,10 +47,11 @@ export default function Anime() {
     [navigate, title],
   )
 
-  // Saisons. Une URL sans saison est complétée par la première disponible.
+  // Saisons + synopsis. Une URL sans saison est complétée par la première.
   useEffect(() => {
     let cancelled = false
     setError(null)
+    setVu(isWatched(title))
 
     api
       .getSeasons(title)
@@ -57,6 +60,7 @@ export default function Anime() {
         // panneauScan = chapitres de manga : aucun episode video derriere.
         const videos = found.filter((s) => s.type !== 'scan')
         setSeasons(videos)
+        setSynopsis(found.find((s) => s.synopsis)?.synopsis ?? '')
         if (!videos.length) setError('Pas de vidéo pour ce titre — uniquement des scans.')
         else if (!saison) navigate(`/anime/${encodeURIComponent(title)}/${encodeURIComponent(videos[0].Saison)}/vostfr`, { replace: true })
       })
@@ -146,8 +150,16 @@ export default function Anime() {
 
   const onEnded = useCallback(() => {
     const next = episodes.find((e) => e.episode === current + 1 && e.lisible)
-    if (next) go(saison, version, next.episode)
-  }, [episodes, current, go, saison, version])
+    if (next) {
+      go(saison, version, next.episode)
+      return
+    }
+    // Dernier épisode lisible terminé → l'œuvre est « déjà vue ».
+    if (episodes.length && current !== null) {
+      markWatched(title)
+      setVu(true)
+    }
+  }, [episodes, current, go, saison, version, title])
 
   const hasNext = episodes.some((e) => e.episode === current + 1 && e.lisible)
 
@@ -170,12 +182,29 @@ export default function Anime() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-4xl tracking-wide">{title}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-4xl tracking-wide">{title}</h1>
+          {vu && (
+            <button
+              onClick={() => {
+                unmarkWatched(title)
+                setVu(false)
+              }}
+              title="Retirer l'étiquette"
+              className="rounded-[14px] border-2 border-white bg-white px-2.5 py-0.5 text-sm text-black transition hover:bg-black hover:text-white"
+            >
+              ✓ déjà vu
+            </button>
+          )}
+        </div>
         {saison && (
           <p className="mt-1 text-sm text-white/50">
             {saison} · {version?.toUpperCase()}
             {current !== null && ` · épisode ${current + 1}`}
           </p>
+        )}
+        {synopsis && (
+          <p className="mt-3 max-w-3xl text-base leading-relaxed text-white/70">{synopsis}</p>
         )}
       </div>
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as api from '../api'
-import { recentProgress } from '../progress'
+import { recentProgress, watchedSet } from '../progress'
 import SearchBar from '../components/SearchBar'
 import AnimeCard from '../components/AnimeCard'
 
@@ -31,9 +31,12 @@ export default function Browse() {
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState(null)
   const [resume, setResume] = useState([])
+  // Recalculé à chaque montage : de retour d'un anime terminé, l'étiquette suit.
+  const [vus, setVus] = useState(() => watchedSet())
 
   useEffect(() => {
     setResume(recentProgress())
+    setVus(watchedSet())
     api.getFilters().then((f) => setGenres(f.genres)).catch(() => {})
   }, [])
 
@@ -181,7 +184,7 @@ export default function Browse() {
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {shown.map((item) => (
-          <AnimeCard key={item.link} item={item} onOpen={open} />
+          <AnimeCard key={item.link} item={item} onOpen={open} watched={vus.has(item.title)} />
         ))}
       </div>
 

@@ -429,6 +429,14 @@ class Cardinal:
 
         soup = BeautifulSoup(reponse.text, 'html.parser')
 
+        # Synopsis : sous le <h2>Synopsis</h2> de la fiche.
+        synopsis = ""
+        h2 = soup.find("h2", string=lambda s: s and "synopsis" in s.lower())
+        if h2:
+            p = h2.find_next("p")
+            if p:
+                synopsis = p.get_text(strip=True)
+
         scripts = soup.find_all("script")
         # Le type de panneau est capture : panneauScan = chapitres de manga,
         # pas des episodes video. Aux consommateurs de filtrer.
@@ -446,6 +454,7 @@ class Cardinal:
                             "title": title,
                             "Saison": nom,
                             "type": kind.lower(),
+                            "synopsis": synopsis,
                             "url": saison_url
                         })
 

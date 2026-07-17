@@ -1,10 +1,10 @@
 # Anime Sama — API & application locale
 
+![Anime Sama](docs/banniere-one-piece.jpg)
+
 Application **auto-hébergée** pour regarder les animés et lire les scans
 d'anime-sama : interface épurée, lecteur natif, **aucune pop-up**, aucun lecteur
 tiers. Tout tourne sur ta machine.
-
-![Accueil](docs/accueil.jpg)
 
 ## Démarrage en 30 secondes
 
@@ -32,6 +32,8 @@ rien d'autre à installer.
 
 Le tout dans deux conteneurs : l'API Python qui scrape et résout les liens, et
 le front React servi par nginx.
+
+![Accueil](docs/accueil.jpg)
 
 ### Le lecteur
 
@@ -205,6 +207,8 @@ curl "http://127.0.0.1:5000/api/getAllAnime"
 **Attention** : Cette opération peut prendre plusieurs minutes lors de la première exécution.
 
 ---
+
+![API](docs/banniere-jjk.jpg)
 
 ## Endpoints de l'API
 

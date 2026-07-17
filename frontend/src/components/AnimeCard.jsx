@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 const LANG_LABEL = { FR: 'VF', JP: 'VOSTFR', EN: 'EN' }
 
-export default function AnimeCard({ item, onOpen }) {
+export default function AnimeCard({ item, onOpen, watched = false }) {
   const [broken, setBroken] = useState(false)
 
   return (
@@ -14,12 +14,23 @@ export default function AnimeCard({ item, onOpen }) {
             alt=""
             loading="lazy"
             onError={() => setBroken(true)}
-            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+            className={[
+              'h-full w-full object-cover transition duration-500 group-hover:scale-105',
+              // Une œuvre déjà vue est grisée : le badge seul se remarque mal
+              // dans une grille de 48 cartes.
+              watched ? 'opacity-45' : '',
+            ].join(' ')}
           />
         ) : (
           <div className="grid h-full place-items-center px-2 text-center text-sm text-white/40">
             {item.title}
           </div>
+        )}
+
+        {watched && (
+          <span className="absolute left-1.5 top-1.5 rounded-[10px] border border-white bg-white px-1.5 text-[11px] text-black">
+            ✓ déjà vu
+          </span>
         )}
 
         {item.langues?.length > 0 && (

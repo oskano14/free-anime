@@ -73,6 +73,47 @@ export function clearProgress(title, saison, version) {
   writeAll(all)
 }
 
+// --- Titres terminés -------------------------------------------------------
+// Un simple ensemble de titres « déjà vus », pour l'étiquette sur les cartes.
+// Volontairement par titre, pas par saison : une carte du catalogue ne connaît
+// pas la saison, et « déjà regardé » se comprend au niveau de l'œuvre.
+
+const WATCHED_KEY = 'animesama:watched'
+
+function readWatched() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(WATCHED_KEY))
+    return Array.isArray(raw) ? raw : []
+  } catch {
+    return []
+  }
+}
+
+export function markWatched(title) {
+  const all = new Set(readWatched())
+  if (all.has(title)) return
+  all.add(title)
+  try {
+    localStorage.setItem(WATCHED_KEY, JSON.stringify([...all]))
+  } catch {
+    // Quota plein : sans conséquence, l'étiquette est un confort.
+  }
+}
+
+export function unmarkWatched(title) {
+  const all = readWatched().filter((t) => t !== title)
+  try {
+    localStorage.setItem(WATCHED_KEY, JSON.stringify(all))
+  } catch {
+    /* idem */
+  }
+}
+
+/** Ensemble des titres terminés, pour tester `has(title)` en O(1). */
+export const watchedSet = () => new Set(readWatched())
+
+export const isWatched = (title) => readWatched().includes(title)
+
 // --- Scans -----------------------------------------------------------------
 // Store séparé : un scan n'a ni saison, ni version, ni position en secondes.
 // Mélanger les deux formes dans la même clé rendrait "Reprendre" ambigu.
