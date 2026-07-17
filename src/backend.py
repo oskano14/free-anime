@@ -27,9 +27,9 @@ CATALOGUE_TTL_HOURS = float(os.environ.get("CATALOGUE_TTL_HOURS", "24"))
 
 CARD_SELECTOR = {"name": "div", "class_": "shrink-0 catalog-card card-base"}
 
-# "video.sibnet.ru", "sibnet.ru" domaine sibnet il ne semble pas stable
-ALLOWED_SITES = ["vidmoly.to", "vidmoly.net",
-                 "smoothpre.com", "vidhide.com", "streamwish.com", "sendvid.com"]
+# Mots-cles, pas domaines exacts : un hebergeur change de TLD (vidmoly.to ->
+# .biz) sans qu'on ait a le relister. sibnet retire (peu stable).
+ALLOWED_SITES = ["vidmoly", "smoothpre", "vidhide", "streamwish", "sendvid"]
 
 # datetime.weekday() -> 0 = lundi. Sert a viser le container<Jour> de l'accueil.
 JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]

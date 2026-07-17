@@ -40,8 +40,9 @@ def resolve_vidmoly(url):
     Vidmoly resolver. Tries .net domain which often bypasses bot walls better.
     Supports JS redirection.
     """
-    # Force .net instead of .to if matching
-    url_net = url.replace("vidmoly.to", "vidmoly.net")
+    # Force .net quel que soit le TLD d'origine (.to, .biz, .net...) : ce
+    # miroir passe mieux les murs anti-bot, et Vidmoly change de TLD souvent.
+    url_net = re.sub(r"vidmoly\.[a-z]+", "vidmoly.net", url)
     try:
         r = scraper.get(url_net, headers={**HEADERS, "Referer": url_net}, timeout=10)
         
@@ -104,22 +105,22 @@ def resolve_sendvid(url):
 #  Dispatcher
 # ============================================================
 
+# Clés par mot-cle, pas par domaine exact : un hebergeur peut changer de TLD
+# (vidmoly.to -> .net -> .biz) sans casser la resolution.
 RESOLVER_MAP = {
-    "vidmoly.to": resolve_vidmoly,
-    "vidmoly.net": resolve_vidmoly,
-    "smoothpre.com": resolve_smoothpre,
-    "vidhide.com": resolve_smoothpre,
-    "streamwish.com": resolve_smoothpre,
-    "sendvid.com": resolve_sendvid,
+    "vidmoly": resolve_vidmoly,
+    "smoothpre": resolve_smoothpre,
+    "vidhide": resolve_smoothpre,
+    "streamwish": resolve_smoothpre,
+    "sendvid": resolve_sendvid,
 }
 
 def resolve_video_url(url):
     """
     Resolves a video embed URL to a direct link (mp4/m3u8) or returns original if failed.
     """
-    parsed = urlparse(url)
-    domain = parsed.netloc.lower().replace("www.", "")
-    resolver = RESOLVER_MAP.get(domain)
-    if resolver:
-        return resolver(url)
+    host = urlparse(url).netloc.lower()
+    for key, resolver in RESOLVER_MAP.items():
+        if key in host:
+            return resolver(url)
     return {"url": url, "type": "raw"}
