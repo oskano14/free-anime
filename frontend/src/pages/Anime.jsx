@@ -25,6 +25,7 @@ export default function Anime() {
 
   const [seasons, setSeasons] = useState([])
   const [synopsis, setSynopsis] = useState('')
+  const [cover, setCover] = useState(null)
   const [vu, setVu] = useState(false)
   const [episodes, setEpisodes] = useState([])
   const [loadingEpisodes, setLoadingEpisodes] = useState(false)
@@ -61,6 +62,7 @@ export default function Anime() {
         const videos = found.filter((s) => s.type !== 'scan')
         setSeasons(videos)
         setSynopsis(found.find((s) => s.synopsis)?.synopsis ?? '')
+        setCover(found.find((s) => s.image)?.image ?? null)
         if (!videos.length) setError('Pas de vidéo pour ce titre — uniquement des scans.')
         else if (!saison) navigate(`/anime/${encodeURIComponent(title)}/${encodeURIComponent(videos[0].Saison)}/vostfr`, { replace: true })
       })
@@ -142,10 +144,10 @@ export default function Anime() {
       if (current === null) return
       saveProgress({
         title, saison, version, episode: current,
-        numero: current + 1, time, duration,
+        numero: current + 1, time, duration, image: cover,
       })
     },
-    [title, saison, version, current],
+    [title, saison, version, current, cover],
   )
 
   const onEnded = useCallback(() => {
@@ -156,10 +158,10 @@ export default function Anime() {
     }
     // Dernier épisode lisible terminé → l'œuvre est « déjà vue ».
     if (episodes.length && current !== null) {
-      markWatched(title)
+      markWatched(title, cover)
       setVu(true)
     }
-  }, [episodes, current, go, saison, version, title])
+  }, [episodes, current, go, saison, version, title, cover])
 
   const hasNext = episodes.some((e) => e.episode === current + 1 && e.lisible)
 
@@ -181,31 +183,42 @@ export default function Anime() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-4xl tracking-wide">{title}</h1>
-          {vu && (
-            <button
-              onClick={() => {
-                unmarkWatched(title)
-                setVu(false)
-              }}
-              title="Retirer l'étiquette"
-              className="rounded-[14px] border-2 border-white bg-white px-2.5 py-0.5 text-sm text-black transition hover:bg-black hover:text-white"
-            >
-              ✓ déjà vu
-            </button>
+      <div className="flex flex-col gap-5 sm:flex-row">
+        {cover && (
+          // og:image est un paysage haute résolution : on le recadre en poster
+          // vertical, comme les cartes du catalogue.
+          <img
+            src={cover}
+            alt={title}
+            className="aspect-[2/3] w-40 shrink-0 self-start rounded-[20px] border-2 border-white object-cover sm:w-52"
+          />
+        )}
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-4xl tracking-wide">{title}</h1>
+            {vu && (
+              <button
+                onClick={() => {
+                  unmarkWatched(title)
+                  setVu(false)
+                }}
+                title="Retirer l'étiquette"
+                className="rounded-[14px] border-2 border-white bg-white px-2.5 py-0.5 text-sm text-black transition hover:bg-black hover:text-white"
+              >
+                ✓ déjà vu
+              </button>
+            )}
+          </div>
+          {saison && (
+            <p className="mt-1 text-sm text-white/50">
+              {saison} · {version?.toUpperCase()}
+              {current !== null && ` · épisode ${current + 1}`}
+            </p>
+          )}
+          {synopsis && (
+            <p className="mt-3 text-base leading-relaxed text-white/70">{synopsis}</p>
           )}
         </div>
-        {saison && (
-          <p className="mt-1 text-sm text-white/50">
-            {saison} · {version?.toUpperCase()}
-            {current !== null && ` · épisode ${current + 1}`}
-          </p>
-        )}
-        {synopsis && (
-          <p className="mt-3 max-w-3xl text-base leading-relaxed text-white/70">{synopsis}</p>
-        )}
       </div>
 
       {stream && (

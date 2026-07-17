@@ -157,6 +157,11 @@ class Yui:
         result = downloads.supprimer(job_id)
         return jsonify(result), (404 if "error" in result else 200)
 
+    @app.route('/api/getSorties', methods=["GET"]) # Sorties du jour (anime + scan)
+    def getSorties():
+        result = Cardinal.getSorties()
+        return jsonify(result), (502 if "error" in result else 200)
+
     @app.route('/api/getScanChapitres', methods=["GET"]) # Chapitres d'une oeuvre + nb de pages
     def getScanChapitres():
         nom = request.args.get("n", "").strip()

@@ -27,6 +27,8 @@ export const searchAnime = async (q, limit = 24) =>
 
 export const getFilters = () => get('/api/getFilters')
 
+export const getSorties = () => get('/api/getSorties', {})
+
 export async function getCatalogue({ type = [], genre = [], langue = [], statut = [], page = 1, random = false }) {
   const params = new URLSearchParams()
   type.forEach((v) => params.append('type', v))

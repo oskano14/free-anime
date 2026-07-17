@@ -1,4 +1,5 @@
 import json, os, re, time, cloudscraper, requests, unicodedata
+from datetime import datetime
 from urllib.parse import urlencode, quote
 from rapidfuzz import process, fuzz
 from bs4 import BeautifulSoup
@@ -29,6 +30,9 @@ CARD_SELECTOR = {"name": "div", "class_": "shrink-0 catalog-card card-base"}
 # "video.sibnet.ru", "sibnet.ru" domaine sibnet il ne semble pas stable
 ALLOWED_SITES = ["vidmoly.to", "vidmoly.net",
                  "smoothpre.com", "vidhide.com", "streamwish.com", "sendvid.com"]
+
+# datetime.weekday() -> 0 = lundi. Sert a viser le container<Jour> de l'accueil.
+JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
 
 scraper = cloudscraper.create_scraper()
 
@@ -437,6 +441,10 @@ class Cardinal:
             if p:
                 synopsis = p.get_text(strip=True)
 
+        # Jaquette pleine (og:image), plus grande que la vignette du catalogue.
+        og = soup.find("meta", property="og:image")
+        cover = og.get("content") if og else None
+
         scripts = soup.find_all("script")
         # Le type de panneau est capture : panneauScan = chapitres de manga,
         # pas des episodes video. Aux consommateurs de filtrer.
@@ -455,6 +463,7 @@ class Cardinal:
                             "Saison": nom,
                             "type": kind.lower(),
                             "synopsis": synopsis,
+                            "image": cover,
                             "url": saison_url
                         })
 
@@ -516,6 +525,67 @@ class Cardinal:
             return None, "Aucun lecteur trouve dans episodes.js"
 
         return all_eps, None
+
+    @staticmethod
+    def _parse_release_card(card):
+        """Carte de la section 'Sorties du jour' de l'accueil."""
+        a = card.find("a")
+        h2 = card.find("h2", class_="card-title")
+        if not a or not h2 or not a.get("href"):
+            return None
+
+        img = card.find("img", class_="card-image")
+        cls = card.get("class", [])
+        kind = "scan" if "scan-card-premium" in cls else "anime"
+        langues = [f.get("title") for f in card.find_all("img", class_="flag-icon") if f.get("title")]
+
+        return {
+            "title": Cardinal.normalize_title(h2.get_text(strip=True)),
+            "image": img.get("src") if img else None,
+            "type": kind,
+            "langues": langues,
+        }
+
+    @staticmethod
+    def getSorties():
+        """Sorties du jour : ce qu'anime-sama publie aujourd'hui, anime et scan.
+
+        Vient de la section 'Sorties du <jour>' de l'accueil, pas du catalogue :
+        c'est la vraie liste des sorties, pas les titres en cours de diffusion.
+        """
+        base_url = get_base_url()
+        if not base_url:
+            return {"error": "Aucun domaine anime-sama actif trouve"}
+
+        try:
+            r = scraper.get(f"{base_url}/", timeout=20)
+        except requests.exceptions.RequestException as err:
+            return {"error": f"Accueil injoignable : {err}"}
+
+        soup = BeautifulSoup(r.content, "lxml")
+        jour = JOURS[datetime.now().weekday()]
+
+        container = soup.find(id=f"container{jour}")
+        if not container:
+            return {"jour": jour, "date": None, "animes": [], "scans": []}
+
+        # Date affichee : "Sorties du Vendredi - 17/07".
+        date = None
+        for titre in soup.find_all(class_="titreJours"):
+            txt = titre.get_text(strip=True)
+            if jour in txt:
+                m = re.search(r"(\d{1,2}/\d{1,2})", txt)
+                date = m.group(1) if m else None
+                break
+
+        animes, scans = [], []
+        for card in container.find_all("div", class_="card-base"):
+            item = Cardinal._parse_release_card(card)
+            if not item:
+                continue
+            (scans if item["type"] == "scan" else animes).append(item)
+
+        return {"jour": jour, "date": date, "animes": animes, "scans": scans}
 
     @staticmethod
     def _scan_oeuvre(nom):

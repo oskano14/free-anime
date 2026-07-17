@@ -60,9 +60,17 @@ export function resumeTime(title, saison, version, episode) {
   return p.time
 }
 
-/** Reprises les plus récentes, pour la page d'accueil. */
-export function recentProgress(limit = 6) {
+/** Lectures en cours (reprenables), hors titres déjà terminés, plus récentes
+ *  d'abord. C'est la rangée « Reprendre » de l'accueil. */
+export function resumeList(limit = 12) {
+  const finis = watchedSet()
   return Object.values(readAll())
+    .filter((p) => {
+      if (finis.has(p.title)) return false // fini → rangée « déjà vu »
+      if (!p.time || p.time < MIN_RESUME_SECONDS) return false
+      if (p.duration && p.time > p.duration - END_MARGIN_SECONDS) return false
+      return true
+    })
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .slice(0, limit)
 }
@@ -74,45 +82,55 @@ export function clearProgress(title, saison, version) {
 }
 
 // --- Titres terminés -------------------------------------------------------
-// Un simple ensemble de titres « déjà vus », pour l'étiquette sur les cartes.
-// Volontairement par titre, pas par saison : une carte du catalogue ne connaît
-// pas la saison, et « déjà regardé » se comprend au niveau de l'œuvre.
+// Map { titre -> {title, image, updatedAt} }. On garde l'image pour l'aperçu de
+// la rangée « déjà vu ». Par titre, pas par saison : une carte du catalogue ne
+// connaît pas la saison, et « déjà regardé » se comprend au niveau de l'œuvre.
 
 const WATCHED_KEY = 'animesama:watched'
 
 function readWatched() {
   try {
     const raw = JSON.parse(localStorage.getItem(WATCHED_KEY))
-    return Array.isArray(raw) ? raw : []
+    // Ancien format : tableau de titres nus. On le migre à la volée.
+    if (Array.isArray(raw)) {
+      return Object.fromEntries(raw.map((t) => [t, { title: t, image: null, updatedAt: 0 }]))
+    }
+    return raw && typeof raw === 'object' ? raw : {}
   } catch {
-    return []
+    return {}
   }
 }
 
-export function markWatched(title) {
-  const all = new Set(readWatched())
-  if (all.has(title)) return
-  all.add(title)
+function writeWatched(all) {
   try {
-    localStorage.setItem(WATCHED_KEY, JSON.stringify([...all]))
+    localStorage.setItem(WATCHED_KEY, JSON.stringify(all))
   } catch {
     // Quota plein : sans conséquence, l'étiquette est un confort.
   }
 }
 
+export function markWatched(title, image = null) {
+  const all = readWatched()
+  all[title] = { title, image: image ?? all[title]?.image ?? null, updatedAt: Date.now() }
+  writeWatched(all)
+}
+
 export function unmarkWatched(title) {
-  const all = readWatched().filter((t) => t !== title)
-  try {
-    localStorage.setItem(WATCHED_KEY, JSON.stringify(all))
-  } catch {
-    /* idem */
-  }
+  const all = readWatched()
+  delete all[title]
+  writeWatched(all)
 }
 
 /** Ensemble des titres terminés, pour tester `has(title)` en O(1). */
-export const watchedSet = () => new Set(readWatched())
+export const watchedSet = () => new Set(Object.keys(readWatched()))
 
-export const isWatched = (title) => readWatched().includes(title)
+export const isWatched = (title) => title in readWatched()
+
+/** Titres terminés avec leur image, plus récents d'abord. */
+export const watchedList = (limit = 12) =>
+  Object.values(readWatched())
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, limit)
 
 // --- Scans -----------------------------------------------------------------
 // Store séparé : un scan n'a ni saison, ni version, ni position en secondes.

@@ -4,6 +4,7 @@ import * as api from '../api'
 import { recentScans } from '../progress'
 import SearchBar from '../components/SearchBar'
 import AnimeCard from '../components/AnimeCard'
+import PosterRow from '../components/PosterRow'
 
 export default function Scans() {
   const navigate = useNavigate()
@@ -21,10 +22,12 @@ export default function Scans() {
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState(null)
   const [resume, setResume] = useState([])
+  const [sorties, setSorties] = useState(null)
 
   useEffect(() => {
     setResume(recentScans())
     api.getFilters().then((f) => setGenres(f.genres)).catch(() => {})
+    api.getSorties().then(setSorties).catch(() => {})
   }, [])
 
   function patch(next) {
@@ -89,6 +92,20 @@ export default function Scans() {
   return (
     <div className="space-y-5">
       <SearchBar onSearch={search} initial={query} autoFocus />
+
+      {!query && sorties?.scans?.length > 0 && (
+        <PosterRow
+          titre={`Sorties du ${sorties.jour}${sorties.date ? ` — ${sorties.date}` : ''}`}
+          items={sorties.scans.map((s) => ({
+            key: `sortie-${s.title}`,
+            title: s.title,
+            image: s.image,
+            sous: s.langues.join(' · '),
+            nav: `/scans/${encodeURIComponent(s.title)}`,
+          }))}
+          onOpen={(it) => navigate(it.nav)}
+        />
+      )}
 
       {!query && resume.length > 0 && (
         <section className="space-y-2">

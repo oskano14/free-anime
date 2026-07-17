@@ -58,7 +58,7 @@ export default function App() {
       <div className="mx-auto max-w-6xl px-5 py-6">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <Link to="/" className="leading-none">
-            <span className="text-[clamp(2.5rem,6vw,4rem)] tracking-wide">anime sama</span>
+            <span className="text-[clamp(2.5rem,6vw,4rem)] tracking-wide">free anime</span>
           </Link>
 
           <nav className="flex items-center gap-2 text-xl">

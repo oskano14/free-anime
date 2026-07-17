@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as api from '../api'
-import { recentProgress, watchedSet } from '../progress'
+import { resumeList, watchedList, watchedSet } from '../progress'
 import SearchBar from '../components/SearchBar'
 import AnimeCard from '../components/AnimeCard'
+import PosterRow from '../components/PosterRow'
 
 // Pas de catégorie "Tout" : anime-sama combine les type[] en ET, donc
 // "Anime OU Film" est inexprimable, et sans filtre on récupère les titres
@@ -31,13 +32,17 @@ export default function Browse() {
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState(null)
   const [resume, setResume] = useState([])
-  // Recalculé à chaque montage : de retour d'un anime terminé, l'étiquette suit.
+  const [vusRow, setVusRow] = useState([])
+  const [sorties, setSorties] = useState(null)
+  // Recalculé à chaque montage : de retour d'un anime terminé, tout se met à jour.
   const [vus, setVus] = useState(() => watchedSet())
 
   useEffect(() => {
-    setResume(recentProgress())
+    setResume(resumeList())
+    setVusRow(watchedList())
     setVus(watchedSet())
     api.getFilters().then((f) => setGenres(f.genres)).catch(() => {})
+    api.getSorties().then(setSorties).catch(() => {})
   }, [])
 
   function patch(next) {
@@ -106,36 +111,47 @@ export default function Browse() {
     <div className="space-y-5">
       <SearchBar onSearch={search} initial={query} autoFocus />
 
-      {!query && resume.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="sd-heading">
-            Reprendre
-          </h2>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {resume.map((r) => {
-              const pct = r.duration ? Math.min(100, (r.time / r.duration) * 100) : 0
-              return (
-                <button
-                  key={`${r.title}|${r.saison}|${r.version}`}
-                  onClick={() =>
-                    navigate(
-                      `/anime/${encodeURIComponent(r.title)}/${encodeURIComponent(r.saison)}/${r.version}/${r.episode}`,
-                    )
-                  }
-                  className="sd-card p-3 text-left"
-                >
-                  <p className="truncate text-lg">{r.title}</p>
-                  <p className="mt-0.5 text-sm text-white/50">
-                    {r.saison} · {r.version.toUpperCase()} · épisode {r.numero}
-                  </p>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full border border-white/40">
-                    <div className="h-full bg-white" style={{ width: `${pct}%` }} />
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        </section>
+      {!query && sorties?.animes?.length > 0 && (
+        <PosterRow
+          titre={`Sorties du ${sorties.jour}${sorties.date ? ` — ${sorties.date}` : ''}`}
+          items={sorties.animes.map((a) => ({
+            key: `sortie-${a.title}`,
+            title: a.title,
+            image: a.image,
+            sous: a.langues.join(' · '),
+            nav: `/anime/${encodeURIComponent(a.title)}`,
+          }))}
+          onOpen={(it) => navigate(it.nav)}
+        />
+      )}
+
+      {!query && (
+        <>
+          <PosterRow
+            titre="Reprendre"
+            items={resume.map((r) => ({
+              key: `${r.title}|${r.saison}|${r.version}`,
+              title: r.title,
+              image: r.image,
+              time: r.time,
+              duration: r.duration,
+              sous: `${r.saison} · ${r.version.toUpperCase()} · ép. ${r.numero}`,
+              nav: `/anime/${encodeURIComponent(r.title)}/${encodeURIComponent(r.saison)}/${r.version}/${r.episode}`,
+            }))}
+            onOpen={(it) => navigate(it.nav)}
+          />
+          <PosterRow
+            titre="Déjà regardé"
+            items={vusRow.map((v) => ({
+              key: v.title,
+              title: v.title,
+              image: v.image,
+              sous: 'terminé',
+              nav: `/anime/${encodeURIComponent(v.title)}`,
+            }))}
+            onOpen={(it) => navigate(it.nav)}
+          />
+        </>
       )}
 
       {!query && (
