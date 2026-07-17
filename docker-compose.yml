@@ -1,0 +1,45 @@
+services:
+  api:
+    build: .
+    image: animesama-api
+    environment:
+      # Le front passe par le proxy nginx (même origine) : le CORS ne sert
+      # qu'aux appels directs à l'API depuis un autre domaine (ex. Vercel).
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+    volumes:
+      # Le catalogue survit aux redémarrages : évite ~20s de rescraping.
+      - catalogue:/app/src/data
+      # Les vidéos téléchargées, partagées avec nginx (cf. service web).
+      - videos:/app/src/data/videos
+    ports:
+      # Utile pour curl/debug ; le front passe par le réseau interne, pas par là.
+      # 5001 et pas 5000 : sur macOS le Centre de contrôle (Receiver AirPlay)
+      # occupe déjà 5000 en wildcard et le bind Docker échoue.
+      - "${API_PORT:-5001}:5000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health').read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  web:
+    build: ./frontend
+    image: animesama-web
+    volumes:
+      # nginx sert les .mp4 lui-même : il gère les requêtes Range (le seek
+      # dans la vidéo) nativement, là où Flask le ferait mal et lentement.
+      - videos:/usr/share/nginx/videos:ro
+    ports:
+      - "8080:80"
+    depends_on:
+      # nginx refuse de démarrer si l'upstream 'api' ne résout pas encore.
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  catalogue:
+  # Attention : ~700 Mo par épisode en 1080p, ~110 Mo en 480p.
+  videos:

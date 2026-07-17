@@ -54,8 +54,8 @@ def resolve_vidmoly(url):
         match = re.search(r'file\s*:\s*["\'](https?://[^"\']+\.m3u8[^"\']*)["\']', r.text)
         if match:
             return {"url": match.group(1), "type": "m3u8"}
-    except:
-        pass
+    except Exception as err:
+        print(f"[vidmoly] {url} : {err}")
     return None
 
 def resolve_smoothpre(url):
@@ -75,8 +75,8 @@ def resolve_smoothpre(url):
                     target_url = m.group(1).replace('\\', '')
                     if target_url.startswith("/"): target_url = base_url + target_url
                     return {"url": target_url, "type": "m3u8"}
-    except:
-        pass
+    except Exception as err:
+        print(f"[smoothpre] {url} : {err}")
     return None
 
 def resolve_sendvid(url):
@@ -96,8 +96,8 @@ def resolve_sendvid(url):
             video_url = match.group(1)
             if video_url.startswith("//"): video_url = "https:" + video_url
             return {"url": video_url, "type": "mp4"}
-    except:
-        pass
+    except Exception as err:
+        print(f"[sendvid] {url} : {err}")
     return None
 
 # ============================================================

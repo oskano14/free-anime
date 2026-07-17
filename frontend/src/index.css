@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+/* Police auto-hébergée : le design d'origine la tirait de Google Fonts, ce qui
+   ferait dépendre une app locale d'un CDN externe. */
+@import "@fontsource/koulen/400.css";
+
+@theme {
+  --font-display: "Koulen", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background-color: #000;
+    color: #fff;
+    font-family: "Koulen", ui-sans-serif, system-ui, sans-serif;
+  }
+  /* La croix native du champ search jure avec le thème noir. */
+  input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+}
+
+/* --- Primitives reprises de scantrad -------------------------------------
+   Bordure blanche 2px, rayon 20px, halo gris, inversion noir/blanc au survol.
+   Gardées en CSS plutôt qu'en @apply : c'est l'identité du design, elle doit
+   rester lisible d'un coup d'œil. */
+
+.sd-glow {
+  box-shadow: 3px 3px 30px rgb(98 98 98 / 0.55);
+}
+
+.sd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #000;
+  color: #fff;
+  border: 2px solid #fff;
+  border-radius: 20px;
+  padding: 0.5rem 1.25rem;
+  cursor: pointer;
+  transition: all 0.35s ease;
+  box-shadow: 3px 3px 30px rgb(98 98 98 / 0.45);
+}
+.sd-btn:hover:not(:disabled) {
+  background: #fff;
+  color: #000;
+  padding-inline: 1.75rem;
+  box-shadow: 4px 4px 30px rgb(100 100 101 / 0.7);
+}
+.sd-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Onglet / lien de nav : même inversion, sans bordure au repos. */
+.sd-link {
+  color: #fff;
+  border-radius: 20px;
+  padding: 0.35rem 0.9rem;
+  transition: all 0.35s ease;
+  cursor: pointer;
+}
+.sd-link:hover {
+  background: #fff;
+  color: #000;
+}
+.sd-link[data-active="true"] {
+  background: #fff;
+  color: #000;
+}
+
+/* Bandeau de section : le h2 encadré du design d'origine. */
+.sd-heading {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: 0.4rem 1rem;
+  border: 4px solid #fff;
+  border-radius: 30px;
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+}
+
+.sd-card {
+  background: #000;
+  border: 2px solid #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  transition: all 0.35s ease;
+}
+.sd-card:hover {
+  box-shadow: 3px 3px 30px rgb(98 98 98 / 0.6);
+  transform: translateY(-3px);
+}
+
+.sd-field {
+  background: #000;
+  color: #fff;
+  border: 2px solid #fff;
+  border-radius: 20px;
+  transition: all 0.35s ease;
+}
+.sd-field:focus {
+  outline: none;
+  box-shadow: 3px 3px 30px rgb(98 98 98 / 0.55);
+}

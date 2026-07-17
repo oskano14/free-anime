@@ -20,7 +20,6 @@ class Api:
         """
 
         Utils.hashCheck()
-        Utils.gitCheck()
 
         Config.IP = ip
         Config.PORT = port

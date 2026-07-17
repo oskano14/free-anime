@@ -1,0 +1,23 @@
+.git
+.gitignore
+__pycache__
+**/__pycache__
+*.pyc
+.venv
+venv
+env
+
+# Le front a son propre contexte de build (frontend/Dockerfile).
+frontend
+node_modules
+
+# Le catalogue vit dans un volume, jamais dans l'image.
+src/data
+data
+
+logs
+Dist
+tests
+LICENSE
+README.md
+docker-compose.yml

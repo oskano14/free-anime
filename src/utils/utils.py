@@ -3,6 +3,7 @@ import cloudscraper, re, requests
 URL_PW = "https://anime-sama.pw"
 
 class Utils:
+    @staticmethod
     def findLink(URL_PW=URL_PW): # Function AI Assist
 
         scraper = cloudscraper.create_scraper()  # équivaut à un navigateur

@@ -1,4 +1,37 @@
-# Documentation API Anime
+# Anime Sama — API & application locale
+
+Application **auto-hébergée** pour regarder les animés et lire les scans
+d'anime-sama : interface épurée, lecteur natif, **aucune pop-up**, aucun lecteur
+tiers. Tout tourne sur ta machine.
+
+## Démarrage en 30 secondes
+
+Il te faut seulement **Docker Desktop**, lancé.
+
+```bash
+git clone https://github.com/oskano14/AnimeSamaApi.git
+cd AnimeSamaApi
+docker compose up -d
+```
+
+Puis **<http://localhost:8080>**. C'est tout — pas de compte, pas de clé d'API,
+rien d'autre à installer.
+
+**→ Guide complet, réglages et dépannage : [INSTALL.md](INSTALL.md)**
+
+## Ce que ça fait
+
+| | |
+|---|---|
+| **Vidéo** | catalogue (de la saison / animés / films), 109 genres, recherche floue, lecteur HLS, reprise de lecture, épisode suivant automatique |
+| **Scans** | catalogue, lecteur en défilement, reprise de lecture |
+| **Hors-ligne** | téléchargement d'un épisode en `.mp4` (480p ou 1080p) via ffmpeg, lisible sans connexion |
+| **API** | REST, utilisable seule — [voir les endpoints](#endpoints-de-lapi) |
+
+Le tout dans deux conteneurs : l'API Python qui scrape et résout les liens, et
+le front React servi par nginx.
+
+---
 
 ## Table des matières
 
@@ -16,7 +49,7 @@
 
 ## Présentation
 
-Cette API REST permet de rechercher, récupérer et accéder aux informations d'animes depuis le site anime-sama.org. Elle propose des fonctionnalités de recherche intelligente, de récupération de métadonnées et d'extraction de liens de lecture.
+Cette API REST permet de rechercher, récupérer et accéder aux informations d'animes depuis le site anime-sama. Elle propose des fonctionnalités de recherche intelligente, de récupération de métadonnées et d'extraction de liens de lecture.
 
 ### Fonctionnalités principales
 
@@ -86,13 +119,48 @@ Requête HTTP → Flask (api.py) → Cardinal (backend.py) → Scraping/Recherch
 
 ## Démarrage rapide
 
-### Lancer l'API
+### Avec Docker (le plus simple)
+
+```bash
+docker compose up -d
+```
+
+Puis ouvrir **http://localhost:8080**. C'est tout : deux conteneurs démarrent.
+Guide détaillé et dépannage dans **[INSTALL.md](INSTALL.md)**.
+
+| Conteneur | Rôle | Accès |
+|---|---|---|
+| `api` | Flask servi par waitress | `http://localhost:5001` (debug) |
+| `web` | Front React buildé, servi par nginx | `http://localhost:8080` |
+
+Le front appelle `/api` en relatif ; nginx proxifie vers le conteneur `api` sur
+le réseau interne. Tout est en **même origine**, donc aucun CORS à configurer en
+local. `CORS_ORIGINS` ne sert que si un front externe (Vercel) tape l'API en
+direct.
+
+```bash
+docker compose logs -f api   # suivre les logs
+docker compose down          # arrêter (le catalogue survit)
+docker compose down -v       # arrêter et vider le catalogue
+```
+
+Deux détails qui expliquent les choix du compose :
+
+- **L'API est publiée sur 5001, pas 5000** : sur macOS le Centre de contrôle
+  (Receiver AirPlay) occupe déjà 5000 et le bind Docker échoue. Surchargeable
+  via `API_PORT=5002 docker compose up -d`. En interne c'est toujours 5000.
+- **`requirements.txt` ne liste que les dépendances réelles** (8 paquets). Il a
+  été nettoyé d'un `pip freeze` de 56 paquets — FlareSolverr, DrissionPage,
+  openpyxl… — qu'aucun import ne référençait : 40 Mo de deps au lieu de 105 Mo.
+
+### Sans Docker
 
 ```python
 python main.py
 ```
 
-Par défaut, l'API démarre sur `http://127.0.0.1:5000` en mode debug.
+Par défaut, l'API démarre sur `http://127.0.0.1:5000` en mode debug. Pour le
+front, voir [frontend/README.md](frontend/README.md).
 
 ### Configuration personnalisée
 
@@ -158,10 +226,16 @@ http://127.0.0.1:5000/api/getAllAnime?r=True
 
 **Réponse** :
 ```json
-"Recuperation achever"
+"Recuperation achevee : 2319 animes"
 ```
 
-**Note** : Le fichier généré se trouve dans `data/json/AnimeInfo.json` et contient environ 4000+ animes comprenner que cela puisse prendre du temps au premier lancement ainsi que les reset.
+**Note** : Le fichier généré se trouve dans `src/data/json/AnimeInfo.json` (~2300 animes,
+une quinzaine de secondes de scraping). Il n'est plus nécessaire de l'appeler à la main :
+`/api/getSerchAnime` reconstruit le catalogue tout seul s'il est absent, périmé (changement
+de domaine anime-sama) ou écrit dans un ancien schéma.
+
+Chaque entrée porte les mêmes champs que les `items` de [`/api/getCatalogue`](#10-catalogue-filtré-les-catégories)
+(`title`, `link`, `image`, `alt_titles`, `genres`, `types`, `langues`).
 
 ---
 
@@ -338,6 +412,174 @@ http://127.0.0.1:5000/api/getAnimeSamaURL
 ```
 
 **Note** : L'endpoint ici renvoie bêtement le lien actif de anime sama prete a utilisation direct pour être stocker en variable par exemple
+
+---
+
+### 9. Vocabulaire des filtres
+
+**GET** `/api/getFilters`
+
+Valeurs de filtre acceptées par le catalogue, lues dans le formulaire d'anime-sama
+(pas codées en dur : c'est le site qui fait autorité). Mis en cache.
+
+**Réponse** :
+```json
+{
+  "types": ["Anime", "Scans", "Film", "Autres"],
+  "langues": ["VOSTFR", "VF", "VASTFR"],
+  "statuts": ["En cours", "Terminé"],
+  "genres": ["Action", "Adolescence", "Amour", "..."]
+}
+```
+
+---
+
+### 10. Catalogue filtré (les catégories)
+
+**GET** `/api/getCatalogue`
+
+Catalogue filtré et paginé. Les filtres sont appliqués par anime-sama lui-même,
+donc jamais de cache à resynchroniser. ~0.2 s par appel.
+
+**Paramètres** (tous optionnels, tous répétables sauf `page`) :
+- `type` : `Anime` | `Scans` | `Film` | `Autres`
+- `genre` : un des 109 genres de `/api/getFilters`
+- `langue` : `VOSTFR` | `VF` | `VASTFR`
+- `statut` : `En cours` | `Terminé`
+- `page` : défaut `1`
+
+**Exemple** — les animés de la saison :
+```
+http://127.0.0.1:5000/api/getCatalogue?type=Anime&statut=En+cours
+http://127.0.0.1:5000/api/getCatalogue?type=Film&genre=Action&page=2
+```
+
+**Réponse** :
+```json
+{
+  "page": 1,
+  "total": 48,
+  "derniere_page": false,
+  "items": [
+    {
+      "title": "Frieren",
+      "link": "https://anime-sama.to/catalogue/frieren",
+      "image": "https://cdn.jsdelivr.net/.../frieren0.webp",
+      "alt_titles": "Sousou no Frieren, Frieren at the Funeral",
+      "genres": ["Shônen", "Aventure", "Drame"],
+      "genres_tronques": true,
+      "types": ["Anime", "Scans"],
+      "langues": ["JP", "FR"]
+    }
+  ]
+}
+```
+
+**Notes** :
+- `derniere_page` vaut `true` dès que la page rend moins de 48 cartes.
+- `genres_tronques` signale que la carte a masqué des genres derrière un « … ».
+  La liste complète n'est pas dans le catalogue.
+- `alt_titles` est une **chaîne brute**, jamais découpée : le site sépare par des
+  virgules mais les titres en contiennent (`'Tis Time for "Torture," Princess`).
+- `langues` porte le code du drapeau (`JP` = VOSTFR dispo, `FR` = VF dispo).
+- Il n'y a pas de filtre « saison » exploitable : `annee_min` existe côté site
+  mais n'est presque jamais renseigné (5 titres sur 85). `statut=En cours` est
+  le seul marqueur fiable de ce qui sort en ce moment.
+
+---
+
+### 11. Grille d'épisodes (sans résolution)
+
+**GET** `/api/getEpisodes`
+
+Liste les épisodes d'une saison **sans** résoudre les liens vidéo. C'est l'appel
+qui remplit la grille : ~2 s, contre ~6 s si on résolvait tout.
+
+**Paramètres** : `n` (obligatoire), `s` (défaut `saison1`), `v` (défaut `vostfr`)
+
+**Réponse** :
+```json
+{
+  "titre": "Frieren", "saison": "Saison 1", "version": "vostfr", "total": 28,
+  "episodes": [{"episode": 0, "numero": 1, "lecteurs": ["eps2", "eps4"], "lisible": true}]
+}
+```
+
+---
+
+### 12. Lien d'un seul épisode
+
+**GET** `/api/getEpisodeLink`
+
+Résout **un** épisode : l'appel que fait le lecteur au clic (~0.7 s). Essaie les
+lecteurs dans l'ordre et s'arrête au premier qui répond.
+
+**Paramètres** : `n` (obligatoire), `s`, `v`, `e` (index de l'épisode, **0-based**)
+
+**Réponse** :
+```json
+{
+  "episode": 0, "numero": 1, "url": "https://.../master.m3u8",
+  "type": "m3u8", "lecteur": "eps2", "titre": "Frieren", "saison": "Saison 1"
+}
+```
+
+**Note** : les liens expirent en ~12 h (token Vidmoly) — à ne jamais mettre en
+cache durablement.
+
+---
+
+### 13. Téléchargements hors-ligne
+
+**GET** `/api/downloads` — liste et état.
+
+```json
+{
+  "ffmpeg": true,
+  "qualites": ["1080p", "480p"],
+  "items": [{
+    "id": "6948ddec293f", "titre": "Frieren", "saison": "Saison 1",
+    "version": "vostfr", "episode": 0, "numero": 1, "qualite": "480p",
+    "statut": "termine", "progres": 100, "duree": 1560.0,
+    "taille": 89942309, "erreur": null,
+    "url": "/videos/frieren-saison-1-vostfr-ep01-480p.mp4"
+  }]
+}
+```
+
+**POST** `/api/downloads` — met un épisode en file.
+
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"n":"Frieren","s":"Saison 1","v":"vostfr","e":0,"q":"480p"}' \
+  http://localhost:5001/api/downloads
+```
+
+`statut` : `en_attente` → `en_cours` → `termine` (ou `erreur`).
+
+**DELETE** `/api/downloads/<id>` — annule un mux en cours, ou supprime le fichier.
+
+**Notes** :
+- ffmpeg travaille en **copie de flux** : aucun ré-encodage, ~40 s pour un
+  épisode de 26 min, aucune perte de qualité.
+- Poids : **~110 Mo en 480p**, **~700 Mo en 1080p** par épisode.
+- Le lien source est résolu **au lancement du mux**, pas à la mise en file : le
+  token Vidmoly ne vit que 12 h.
+- Les `.mp4` sont servis par nginx sur `/videos/…`, avec les requêtes Range
+  (donc le seek fonctionne). Un mux en cours (`.part`) n'est jamais exposé.
+- Un seul mux à la fois : le goulot est le réseau, paralléliser ne gagnerait rien.
+
+---
+
+### 14. Sonde de santé
+
+**GET** `/health`
+
+Aucun appel réseau, réponse immédiate. Utilisée par le healthcheck Docker.
+
+```json
+{"status": "ok"}
+```
 
 ---
 

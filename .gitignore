@@ -4,3 +4,8 @@ data
 Dist
 logs
 tests
+
+node_modules
+frontend/dist
+.env
+.env.local
