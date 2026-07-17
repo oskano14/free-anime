@@ -4,6 +4,8 @@ Application **auto-hébergée** pour regarder les animés et lire les scans
 d'anime-sama : interface épurée, lecteur natif, **aucune pop-up**, aucun lecteur
 tiers. Tout tourne sur ta machine.
 
+![Accueil](docs/accueil.jpg)
+
 ## Démarrage en 30 secondes
 
 Il te faut seulement **Docker Desktop**, lancé.
@@ -30,6 +32,27 @@ rien d'autre à installer.
 
 Le tout dans deux conteneurs : l'API Python qui scrape et résout les liens, et
 le front React servi par nginx.
+
+### Le lecteur
+
+Flux direct en `m3u8`/`mp4`, dans un `<video>` natif avec hls.js. Reprise à la
+seconde près, épisode suivant enchaîné, raccourcis clavier, et téléchargement
+hors-ligne en un clic.
+
+![Lecteur vidéo](docs/lecteur.jpg)
+
+### Les scans
+
+Lecture en défilement continu, chargement des pages au fil du scroll.
+
+![Lecteur de scans](docs/scans.jpg)
+
+### Le hors-ligne
+
+Mux `ffmpeg` en copie de flux : un épisode de 26 min est prêt en moins d'une
+minute, sans ré-encodage ni perte.
+
+![Téléchargements](docs/hors-ligne.jpg)
 
 ---
 
