@@ -547,24 +547,8 @@ class Cardinal:
         }
 
     @staticmethod
-    def getSorties():
-        """Sorties du jour : ce qu'anime-sama publie aujourd'hui, anime et scan.
-
-        Vient de la section 'Sorties du <jour>' de l'accueil, pas du catalogue :
-        c'est la vraie liste des sorties, pas les titres en cours de diffusion.
-        """
-        base_url = get_base_url()
-        if not base_url:
-            return {"error": "Aucun domaine anime-sama actif trouve"}
-
-        try:
-            r = scraper.get(f"{base_url}/", timeout=20)
-        except requests.exceptions.RequestException as err:
-            return {"error": f"Accueil injoignable : {err}"}
-
-        soup = BeautifulSoup(r.content, "lxml")
-        jour = JOURS[datetime.now().weekday()]
-
+    def _parse_jour(soup, jour):
+        """Sorties d'un jour donne depuis la soup de l'accueil (anime + scan)."""
         container = soup.find(id=f"container{jour}")
         if not container:
             return {"jour": jour, "date": None, "animes": [], "scans": []}
@@ -586,6 +570,46 @@ class Cardinal:
             (scans if item["type"] == "scan" else animes).append(item)
 
         return {"jour": jour, "date": date, "animes": animes, "scans": scans}
+
+    @staticmethod
+    def _accueil_soup():
+        base_url = get_base_url()
+        if not base_url:
+            return None, {"error": "Aucun domaine anime-sama actif trouve"}
+        try:
+            r = scraper.get(f"{base_url}/", timeout=20)
+        except requests.exceptions.RequestException as err:
+            return None, {"error": f"Accueil injoignable : {err}"}
+        return BeautifulSoup(r.content, "lxml"), None
+
+    @staticmethod
+    def getSorties():
+        """Sorties du jour : ce qu'anime-sama publie aujourd'hui, anime et scan.
+
+        Vient de la section 'Sorties du <jour>' de l'accueil, pas du catalogue :
+        c'est la vraie liste des sorties, pas les titres en cours de diffusion.
+        """
+        soup, err = Cardinal._accueil_soup()
+        if err:
+            return err
+        return Cardinal._parse_jour(soup, JOURS[datetime.now().weekday()])
+
+    @staticmethod
+    def getSemaine():
+        """Planning complet : les sorties de chaque jour de la semaine.
+
+        Une seule requete vers l'accueil, decoupee en 7 jours. L'ordre commence
+        a aujourd'hui (le jour courant en premier), plus parlant qu'un lundi fixe.
+        """
+        soup, err = Cardinal._accueil_soup()
+        if err:
+            return err
+
+        aujourdhui = datetime.now().weekday()
+        ordre = [JOURS[(aujourdhui + i) % 7] for i in range(7)]
+        jours = [Cardinal._parse_jour(soup, j) for j in ordre]
+
+        return {"aujourdhui": JOURS[aujourdhui], "jours": jours}
 
     @staticmethod
     def _scan_oeuvre(nom):

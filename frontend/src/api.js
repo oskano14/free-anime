@@ -29,6 +29,8 @@ export const getFilters = () => get('/api/getFilters')
 
 export const getSorties = () => get('/api/getSorties', {})
 
+export const getSemaine = () => get('/api/getSemaine', {})
+
 export async function getCatalogue({ type = [], genre = [], langue = [], statut = [], page = 1, random = false }) {
   const params = new URLSearchParams()
   type.forEach((v) => params.append('type', v))

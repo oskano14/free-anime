@@ -6,10 +6,12 @@ import Anime from './pages/Anime'
 import Scans from './pages/Scans'
 import ScanReader from './pages/ScanReader'
 import Downloads from './pages/Downloads'
+import Semaine from './pages/Semaine'
 
 const SECTIONS = [
   { to: '/', label: 'vidéo' },
   { to: '/scans', label: 'scans' },
+  { to: '/planning', label: 'planning' },
   { to: '/telechargements', label: 'hors-ligne' },
 ]
 
@@ -29,9 +31,11 @@ export default function App() {
   const onDetail = /^\/(anime|scans)\/.+/.test(pathname)
   const inScans = pathname.startsWith('/scans')
   const inDl = pathname.startsWith('/telechargements')
+  const inSemaine = pathname.startsWith('/planning')
 
-  const sectionActive = (to) =>
-    to === '/telechargements' ? inDl : to === '/scans' ? inScans && !inDl : !inScans && !inDl
+  // Une page de détail (/anime/…) reste dans sa section : on résout la section
+  // active une bonne fois, puis chaque lien compare son chemin.
+  const activeSection = inDl ? '/telechargements' : inScans ? '/scans' : inSemaine ? '/planning' : '/'
 
   // "me surprendre" : anime-sama sait rendre une œuvre au hasard (random=1).
   async function meSurprendre() {
@@ -67,9 +71,7 @@ export default function App() {
                 key={s.to}
                 to={s.to}
                 className="sd-link"
-                // NavLink ne sait pas qu'une page de détail (/anime/…) fait
-                // encore partie de sa section : on décide nous-mêmes.
-                data-active={sectionActive(s.to)}
+                data-active={s.to === activeSection}
               >
                 {s.label}
               </Link>
@@ -95,6 +97,7 @@ export default function App() {
           <Route path="/scans" element={<Scans />} />
           <Route path="/scans/:title" element={<ScanReader />} />
           <Route path="/scans/:title/:chapitre" element={<ScanReader />} />
+          <Route path="/planning" element={<Semaine />} />
           <Route path="/telechargements" element={<Downloads />} />
         </Routes>
 

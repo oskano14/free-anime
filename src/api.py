@@ -162,6 +162,11 @@ class Yui:
         result = Cardinal.getSorties()
         return jsonify(result), (502 if "error" in result else 200)
 
+    @app.route('/api/getSemaine', methods=["GET"]) # Planning : sorties de toute la semaine
+    def getSemaine():
+        result = Cardinal.getSemaine()
+        return jsonify(result), (502 if "error" in result else 200)
+
     @app.route('/api/getScanChapitres', methods=["GET"]) # Chapitres d'une oeuvre + nb de pages
     def getScanChapitres():
         nom = request.args.get("n", "").strip()
