@@ -132,10 +132,25 @@ C'est pour ça que l'API est publiée sur **5001**. Si 5001 est pris aussi :
 **« cannot connect to the Docker daemon »**
 Docker Desktop n'est pas lancé. Ouvre-le et attends l'icône baleine.
 
-**La page charge mais aucun anime n'apparaît**
-`docker compose logs -f api` pour voir ce qui se passe. Si rien ne bouge,
-anime-sama a peut-être changé de domaine : l'API le redétecte seule au
-redémarrage (`docker compose restart api`).
+**La page charge mais aucun anime n'apparaît** ⚠️ le plus fréquent
+Le bandeau rouge « anime-sama injoignable » le confirme. **Ton réseau bloque
+anime-sama** — c'est très courant : en France plusieurs FAI (Orange, Free, SFR,
+Bouygues) le bloquent par décision de justice, et d'autres pays aussi. L'appli
+n'y peut rien, le site est simplement inaccessible depuis ta connexion.
+
+Solutions :
+- un **VPN** (le plus fiable) ;
+- ou changer de **DNS** pour `1.1.1.1` (Cloudflare) / `8.8.8.8` (Google) — ça
+  suffit quand le blocage est seulement au niveau DNS.
+
+Pour vérifier d'un coup si l'API joint anime-sama :
+```bash
+curl http://localhost:5001/api/status
+```
+`{"ok": true, ...}` = tout va bien. `{"ok": false, ...}` = site bloqué, VPN/DNS.
+
+Si le domaine a juste changé (pas un blocage), l'API le redétecte seule au
+redémarrage : `docker compose restart api`.
 
 **La première recherche est longue**
 C'est normal, ~10 s : l'index local se construit. Une seule fois.
@@ -161,30 +176,39 @@ l'onglet hors-ligne, ou vide tout : `docker volume rm animesamaapi_videos`.
 
 ## Sans Docker
 
-Utile pour développer. Deux terminaux.
+Pas envie de Docker ? Un seul script fait tout.
 
 **Prérequis** : Python ≥ 3.9, Node ≥ 20.
 
 ```bash
-# terminal 1 — l'API
-pip install -r requirements.txt
-python main.py                     # http://127.0.0.1:5000
+./start.sh
 ```
+
+Puis ouvre **<http://localhost:5173>**. `Ctrl+C` arrête tout.
+
+Au premier lancement le script crée un environnement Python (`.venv`) et installe
+les dépendances (Python + npm) — compte une minute. Ensuite il démarre direct :
+l'API sur le port 5000, le front (Vite) sur 5173, qui proxifie `/api` vers l'API
+(donc pas de CORS à gérer non plus).
+
+Ports personnalisables :
 
 ```bash
-# terminal 2 — le front
-cd frontend
-npm install
-npm run dev                        # http://localhost:5173
+API_PORT=5055 WEB_PORT=3000 ./start.sh
 ```
 
-En dev, Vite proxifie `/api` vers `127.0.0.1:5000` (voir
-[frontend/vite.config.js](frontend/vite.config.js)) : on reste en même origine,
-donc pas de CORS à gérer non plus.
+> L'API tourne sur le port 5000 alors que Docker ne le peut pas : Flask se lie à
+> `127.0.0.1` avec `SO_REUSEADDR` et cohabite avec AirPlay, là où le bind
+> `0.0.0.0` de Docker échoue.
 
-> Ici l'API tourne bien sur le port 5000 alors que Docker ne le peut pas :
-> Flask se lie à `127.0.0.1` avec `SO_REUSEADDR` et cohabite avec AirPlay, là où
-> le bind `0.0.0.0` de Docker échoue.
+### À la main (pour développer)
+
+Si tu préfères deux terminaux séparés :
+
+```bash
+pip install -r requirements.txt && python main.py     # API, :5000
+cd frontend && npm install && npm run dev             # front, :5173
+```
 
 ---
 

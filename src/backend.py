@@ -52,6 +52,23 @@ def get_base_url(force_refresh=False):
     return _BASE_URL
 
 
+def diagnostic():
+    """État de la connexion à anime-sama, pour un message clair côté front
+    plutôt qu'une page vide sans explication."""
+    url = get_base_url(force_refresh=True)
+    if url:
+        return {"ok": True, "domaine": url}
+    return {
+        "ok": False,
+        "domaine": None,
+        "message": (
+            "Impossible de joindre anime-sama. Le site est probablement bloqué "
+            "sur ce réseau (FAI, pays, DNS). Essaie un VPN, ou change de DNS "
+            "(ex. 1.1.1.1 de Cloudflare)."
+        ),
+    }
+
+
 def _as_bool(value):
     return str(value).strip().lower() in ("true", "1", "yes", "oui")
 

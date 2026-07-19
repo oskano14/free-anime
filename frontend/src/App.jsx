@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import * as api from './api'
 import Browse from './pages/Browse'
@@ -27,6 +27,13 @@ export default function App() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [surprise, setSurprise] = useState(false)
+
+  // Diagnostic global : si anime-sama est injoignable (FAI/DNS/région),
+  // l'app serait vide sans explication. On l'affiche franchement.
+  const [statut, setStatut] = useState(null)
+  useEffect(() => {
+    api.getStatus().then(setStatut).catch(() => {})
+  }, [])
 
   const onDetail = /^\/(anime|scans)\/.+/.test(pathname)
   const inScans = pathname.startsWith('/scans')
@@ -88,6 +95,13 @@ export default function App() {
             <Star />
           </button>
         </header>
+
+        {statut && !statut.ok && (
+          <div className="mb-6 rounded-[20px] border-2 border-red-500 bg-black px-5 py-4 text-red-400">
+            <p className="text-xl">⚠ anime-sama injoignable</p>
+            <p className="mt-1 text-base text-white/70">{statut.message}</p>
+          </div>
+        )}
 
         <Routes>
           <Route path="/" element={<Browse />} />

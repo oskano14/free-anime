@@ -31,6 +31,16 @@ export const getSorties = () => get('/api/getSorties', {})
 
 export const getSemaine = () => get('/api/getSemaine', {})
 
+// Ne jette pas : on veut l'objet même en 503 pour lire le message.
+export async function getStatus() {
+  try {
+    const res = await fetch(`${BASE}/api/status`)
+    return await res.json()
+  } catch {
+    return { ok: false, message: "L'API est injoignable. Les conteneurs sont-ils démarrés ?" }
+  }
+}
+
 export async function getCatalogue({ type = [], genre = [], langue = [], statut = [], page = 1, random = false }) {
   const params = new URLSearchParams()
   type.forEach((v) => params.append('type', v))

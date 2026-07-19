@@ -47,6 +47,11 @@ class Yui:
         """Sonde du healthcheck Docker : aucun appel réseau, doit rester instantanée."""
         return jsonify({"status": "ok"})
 
+    @app.route('/api/status', methods=["GET"]) # anime-sama est-il joignable ?
+    def status():
+        result = diagnostic()
+        return jsonify(result), (200 if result["ok"] else 503)
+
     @app.route('/api/getAnimeSamaURL', methods=["GET"])
     def getAnimeSamaURL():
         reponse = Cardinal.findLink()
