@@ -6,12 +6,18 @@ Application **auto-hébergée** pour regarder les animés et lire les scans
 d'anime-sama : interface épurée, lecteur natif, **aucune pop-up**, aucun lecteur
 tiers. Tout tourne sur ta machine.
 
+## Crédits
+Merci a TMCooper pour sont API que vous pouvez retrouver ici : [GitHub](https://github.com/TMCooper/AnimeSamaApi)
+
 ## Démarrage en 30 secondes
 
 Il te faut seulement **Docker Desktop**, lancé.
 
+> [!NOTE]
+> Actuellement l'api est incluse dans le projet au /src le besoins se clonné n'est pas obligatoire actuellement
+
 ```bash
-git clone https://github.com/oskano14/AnimeSamaApi.git
+git clone https://github.com/TMCooper/AnimeSamaApi.git
 cd AnimeSamaApi
 docker compose up -d
 ```

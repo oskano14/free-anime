@@ -26,7 +26,7 @@ C'est tout. Pas besoin de Python ni de Node : ils sont dans les images.
 ## Installation
 
 ```bash
-git clone https://github.com/oskano14/AnimeSamaApi.git
+git clone https://github.com/TMCooper/AnimeSamaApi.git
 cd AnimeSamaApi
 docker compose up -d
 ```
@@ -37,7 +37,13 @@ L'accueil s'affiche tout de suite (~2 s) : les catégories sont lues en direct
 sur anime-sama. En revanche **ta première recherche prend ~10 s** — l'API en
 profite pour construire son index local (~2300 titres). Les suivantes sont
 instantanées (~10 ms), et l'index est stocké dans un volume Docker : il survit
-aux redémarrages et se reconstruit seul au bout de 24 h.
+aux redémarrages et se reconstruit seul au bout de 24 h. Il faut noter que se system 
+ne s'acctualisera pas en cas de besoins donc dans le cas ou il y a de nouvelle oeuvre qui
+sorte sur le site , vous devrez actualiser le catalogue manuellement en fessant cette request
+
+```bash
+curl -X GET http://127.0.0.1:5001/api/getAllAnime?r=True
+```
 
 ---
 
@@ -91,10 +97,14 @@ ré-encodage ni perte : un épisode de 26 min prend moins d'une minute.
 Une fois prêt, il se lit depuis l'onglet hors-ligne **sans aucune connexion**,
 ou s'enregistre sur ton disque avec « enregistrer ».
 
-| Qualité | Poids d'un épisode de 26 min |
+| Qualité | Poids d'un épisode de 26 min | Le code permet le choix |
 |---|---|
-| **480p** | ~110 Mo |
-| **1080p** | ~700 Mo |
+| **480p** | < 100 Mo | Oui |
+| **720p** | ~ 170  Mo | Non |
+| **1080p** | ~ 700 Mo | Oui |
+
+> [!NOTE]
+> Aujoud'hui les animer sont rarement disponible en 480p 720p aujourd'hui il semble que sa se stabiliser pour du 720p en streaming de manière général vos épisode seront donc en moyenne autour des 100 mo a 200 mo par episode donc pas de panique pour la place.
 
 > **Attention à la place.** Une saison de 28 épisodes en 1080p, c'est ~20 Go.
 > Les fichiers vivent dans un volume Docker : `docker compose down -v` efface
@@ -149,6 +159,13 @@ curl http://localhost:5001/api/status
 ```
 `{"ok": true, ...}` = tout va bien. `{"ok": false, ...}` = site bloqué, VPN/DNS.
 
+a noter que vous disposer aussi se cette route si jamais vous voulez verifier la configuration actuelle de l'api
+
+```bash
+http://localhost:5001/config
+```
+Elle vous renvera en claire la configuration actuel de l'api. sont port ainsi que l'ip sur lequelle il tourne actuellement.
+
 Si le domaine a juste changé (pas un blocage), l'API le redétecte seule au
 redémarrage : `docker compose restart api`.
 
@@ -180,8 +197,14 @@ Pas envie de Docker ? Un seul script fait tout.
 
 **Prérequis** : Python ≥ 3.9, Node ≥ 20.
 
+Linux
 ```bash
 ./start.sh
+```
+
+Windows
+```bash
+.\start.bat
 ```
 
 Puis ouvre **<http://localhost:5173>**. `Ctrl+C` arrête tout.
@@ -193,8 +216,14 @@ l'API sur le port 5000, le front (Vite) sur 5173, qui proxifie `/api` vers l'API
 
 Ports personnalisables :
 
+Linux
 ```bash
 API_PORT=5055 WEB_PORT=3000 ./start.sh
+```
+
+Windows
+```bash
+API_PORT=5055 WEB_PORT=3000 .\start.bat
 ```
 
 > L'API tourne sur le port 5000 alors que Docker ne le peut pas : Flask se lie à
