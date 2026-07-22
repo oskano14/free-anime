@@ -430,6 +430,8 @@ class Cardinal:
 
         return final_results
 
+    searchAnime = serchAnime
+
     @staticmethod
     def getInfoAnime(querry): # Voir pour proposer un lien de scan par défaut ou non
         animes = []
@@ -505,10 +507,11 @@ class Cardinal:
         saison_norm = saison.strip().lower().replace(" ", "")
 
         for i, s in enumerate(saisons_normalized):
-            if s == saison_norm:
+            if s == saison_norm or s == f"saison{saison_norm}" or (s.startswith("saison") and s[6:] == saison_norm):
                 return reponse[i]
 
-        return None
+        # Si aucune correspondance exacte, tenter le premier résultat par défaut
+        return reponse[0] if reponse else None
 
     @staticmethod
     def _episode_urls(link):
@@ -737,12 +740,16 @@ class Cardinal:
         version = version.lower().replace(" ", "")
 
         url = reponse["url"]
-        if saison_num == "film":
-            first_rewoks = url.lower().replace("//film", "/film")
-            second_rewoks = first_rewoks.split("/vostfr")[0]
-            link = f"{second_rewoks}/{version}"
-        else:
+        if "/vostfr" in url:
             new_url = url.split("/vostfr")[0]
+        elif "/vf" in url:
+            new_url = url.split("/vf")[0]
+        else:
+            new_url = url.rstrip("/")
+
+        if saison_num == "film":
+            link = f"{new_url}/{version}"
+        else:
             link = f"{new_url}/{version}"
 
         all_eps, err = Cardinal._episode_urls(link)
@@ -754,7 +761,11 @@ class Cardinal:
     @staticmethod
     def _resolve_one(all_eps, episode):
         """Tente les lecteurs dans l'ordre, s'arrete au premier qui repond."""
-        lecteurs = sorted(all_eps, key=lambda name: int(name[3:]))
+        def _get_reader_num(name):
+            digits = re.findall(r"\d+", name)
+            return int(digits[0]) if digits else 999
+
+        lecteurs = sorted(all_eps, key=_get_reader_num)
 
         for lecteur in lecteurs:
             urls = all_eps.get(lecteur, [])
